@@ -1,0 +1,205 @@
+version: "2"
+
+# NOTE: common values are now read from the project `.env` file.
+# - Use `PUID`, `PGID`, `TZ` in your `.env` file for user/timezone values.
+# - Use `CONTAINERS_DIR`, `DOWNLOADS_DIR`, `MEDIA_DIR`, `YOUTUBE_DIR` to set host paths.
+# - `LOCALTIME_VOLUME` can override the localtime volume, default is `/etc/localtime:/etc/localtime:ro`.
+
+services:
+  # ===== VPN / Torrent client =====
+  pia-qbittorrent:
+    container_name: pia-qbittorrent
+    hostname: pia-qbittorrent
+    image: j4ym0/pia-qbittorrent
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - UID=${UID}
+      - GID=${GID}
+      - TZ=${TZ}
+      - REGION=${REGION}
+      - USER=${PIA_USER}
+      - PASSWORD=${PIA_PASSWORD}
+      - PORT_FORWARDING=${PORT_FORWARDING}
+      - LEGACY_IPTABLES=${LEGACY_IPTABLES}
+      - DNS_SERVERS=${DNS_SERVERS}
+    volumes:
+      - ${CONTAINERS_DIR}/pia-qbittorrent:/config
+      - ${DOWNLOADS_DIR}:/downloads
+    ports:
+      - 8888:8888
+
+  # ===== Indexers / Helper services =====
+  flaresolverr:
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: always
+    environment:
+      LOG_LEVEL: info
+      TZ: ${TZ}
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/flaresolverr:/home/flaresolverr/.config
+    ports:
+      - 8191:8191
+
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/prowlarr:/config
+    ports:
+      - 9696:9696
+    depends_on:
+      - pia-qbittorrent
+      - flaresolverr
+
+  # ===== Request managers / discovery =====
+  jellyseerr:
+    container_name: jellyseerr
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      # To use Postgres, set DB_TYPE=postgres and provide DB_* vars
+      # DB_TYPE=postgres
+    volumes:
+      - ${CONTAINERS_DIR}/jellyseerr:/app/config
+    ports:
+      - 5055:5055
+
+  # ===== Media managers (Radarr / Sonarr / Lidarr / Soularr) =====
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/radarr:/config
+      - ${DOWNLOADS_DIR}:/downloads
+      - ${MEDIA_DIR}/movies:/movies
+    ports:
+      - 7878:7878
+    depends_on:
+      - pia-qbittorrent
+      - prowlarr
+
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/sonarr:/config
+      - ${DOWNLOADS_DIR}:/downloads
+      - ${MEDIA_DIR}/tv:/tv
+    ports:
+      - 8989:8989
+    depends_on:
+      - pia-qbittorrent
+      - prowlarr
+
+  lidarr:
+    container_name: lidarr
+    image: ghcr.io/hotio/lidarr:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/lidarr:/config
+      - ${DOWNLOADS_DIR}:/downloads
+      - ${MEDIA_DIR}/music:/music
+    ports:
+      - 8686:8686
+    depends_on:
+      - pia-qbittorrent
+      - prowlarr
+
+  soularr:
+    container_name: soularr
+    image: mrusse08/soularr:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SCRIPT_INTERVAL=${SOULARR_SCRIPT_INTERVAL:-300}
+    volumes:
+      - ${DOWNLOADS_DIR}:/downloads
+      - ${CONTAINERS_DIR}/soularr:/data
+    depends_on:
+      - lidarr
+      - slskd
+
+  # ===== Downloaders & P2P tools =====
+  pinchflat:
+    container_name: pinchflat
+    image: ghcr.io/kieraneglin/pinchflat:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      # PINCHFLAT_OPTION: ${PINCHFLAT_OPTION}
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/pinchflat:/config
+      - ${YOUTUBE_DIR}:/downloads/youtube
+    ports:
+      - 8945:8945
+
+  slskd:
+    container_name: slskd
+    image: slskd/slskd:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SLSKD_REMOTE_CONFIGURATION=true
+    volumes:
+      - ${LOCALTIME_VOLUME:-/etc/localtime:/etc/localtime:ro}
+      - ${CONTAINERS_DIR}/slskd:/app
+      - ${DOWNLOADS_DIR}:/app/downloads
+    ports:
+      - 5030:5030
+      - 5031:5031
+      - 50300:50300
+    depends_on:
+      - lidarr
+
+  # ===== Monitoring & analytics =====
+  tautulli:
+    container_name: tautulli
+    image: tautulli/tautulli:latest
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONTAINERS_DIR}/tautulli:/config
+    ports:
+      - 8181:8181

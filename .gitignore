@@ -1,0 +1,11 @@
+/.env
+.env.*
+!/.env.example
+soularr/config.ini
+/.vscode
+node_modules/
+.DS_Store
+*.log
+*.pem
+/.terraform
+/.venv

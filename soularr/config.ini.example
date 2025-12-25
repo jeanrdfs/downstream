@@ -1,0 +1,59 @@
+[Lidarr]
+# Fill this with your Lidarr API key when available
+api_key = YOUR_LIDARR_API_KEY_HERE
+# URL Lidarr uses (container host and port from docker-compose)
+host_url = http://lidarr:8686
+# Path to slskd downloads inside the Lidarr container
+# In this compose the downloads are mounted to /downloads
+download_dir = /downloads
+# If true, Lidarr won't auto-import from Slskd
+disable_sync = False
+
+[Slskd]
+# Provided Slskd API key
+# NOTE: DO NOT store real secrets in the repository. This file is a template.
+# Copy this file to `soularr/config.ini` locally and replace the value below
+# with your Slskd API key. Add `soularr/config.ini` to your local `.gitignore`.
+api_key = REPLACE_WITH_SLSKD_API_KEY
+# URL Slskd uses (container host and port from docker-compose)
+host_url = http://slskd:5030
+url_base = /
+# Path to Slskd downloads inside the Soularr container
+download_dir = /downloads
+# Delete searches after Soularr runs
+delete_searches = False
+# Max seconds to wait for downloads (prevents infinite hangs)
+stalled_timeout = 3600
+
+[Release Settings]
+# Pick release with most common track count
+use_most_common_tracknum = True
+allow_multi_disc = True
+# Accepted release countries (example)
+accepted_countries = Europe,Japan,United Kingdom,United States,[Worldwide],Australia,Canada
+# Accepted formats
+accepted_formats = CD,Digital Media,Vinyl
+
+[Search Settings]
+search_timeout = 5000
+maximum_peer_queue = 50
+# Minimum upload speed (bits/sec)
+minimum_peer_upload_speed = 0
+# Minimum match ratio between Lidarr track and Soulseek filename
+minimum_filename_match_ratio = 0.8
+# Preferred file types and qualities (most to least preferred)
+# Use "flac" or "mp3" to ignore quality details
+allowed_filetypes = flac 24/192,flac 16/44.1,flac,mp3 320,mp3
+
+[Advanced]
+# If set, Soularr will prepend the artist when searching for albums
+album_prepend_artist = False
+track_prepend_artist = True
+
+[Logging]
+# Passed to Python's logging.basicConfig()
+level = INFO
+format = [%(levelname)s|%(module)s|L%(lineno)d] %(asctime)s: %(message)s
+datefmt = %Y-%m-%dT%H:%M:%S%z
+
+# End of file
