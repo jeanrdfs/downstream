@@ -94,14 +94,3 @@ Contributing & Support 🤝
 
 - When contributing, avoid committing local config files or secrets. Open issues/PRs and include logs/config (sanitized) when asking for help.
 - If you want help purging secrets from history or hardening the stack, I can prepare scripts and a safe step-by-step plan.
-
-Security note
--------------
-
-I removed `soularr/config.ini` from the repo and the Git history in a previous step due to an exposed API key — please rotate that key if you haven't already. Collaborators should re-clone after a history rewrite:
-
-```bash
-rm -rf media-center && git clone https://github.com/jeanrdfs/media-center.git
-```
-
-If you want, I can also add short sample config snippets per service or a diagram showing how services connect. Let me know which you prefer.
